@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DROPRAW — File Share</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --accent: #e8ff47;
+    --accent2: #ff4747;
+    --text: #f0f0f0;
+    --muted: #555;
+    --card: #141414;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 32px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 56px;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+  }
+
+  .logo span { color: var(--muted); }
+
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    letter-spacing: 0.08em;
+  }
+
+  /* HERO */
+  .hero {
+    margin-bottom: 48px;
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 8vw, 72px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+    display: block;
+  }
+
+  .hero p {
+    font-size: 15px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    line-height: 1.6;
+    max-width: 420px;
+  }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    margin-bottom: 12px;
+    background: var(--card);
+  }
+
+  .upload-zone:hover,
+  .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(232, 255, 71, 0.03);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 20px;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .upload-zone h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .upload-hint {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    text-align: right;
+    margin-bottom: 32px;
+  }
+
+  /* PROGRESS */
+  .progress-wrap {
+    display: none;
+    margin-bottom: 32px;
+  }
+
+  .progress-wrap.active { display: block; }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  /* FILE LIST */
+  .files-section {
+    margin-bottom: 12px;
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .file-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .file-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+    letter-spacing: 0;
+  }
+
+  .file-meta { min-width: 0; }
+
+  .file-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+
+  .file-size {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+  }
+
+  .file-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* LINK ROW */
+  .link-row {
+    display: none;
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: none;
+    align-items: center;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .link-row.visible { display: flex; }
+
+  .link-url {
+    flex: 1;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    padding: 10px 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: text;
+    user-select: all;
+  }
+
+  .copy-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 10px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .copy-btn:hover { opacity: 0.85; }
+  .copy-btn.copied { background: #2aff8a; }
+
+  .file-item-inner {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* ACTION BUTTONS */
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-link {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  .btn-link:hover { opacity: 0.85; color: #000; border-color: var(--accent); }
+
+  .btn-del {
+    color: var(--muted);
+    padding: 8px 10px;
+  }
+  .btn-del:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 48px 0 0;
+  }
+
+  .stat { }
+
+  .stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+    letter-spacing: -0.03em;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* EMPTY STATE */
+  .empty {
+    padding: 40px 20px;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 12px 20px;
+    letter-spacing: 0.06em;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <header>
+    <div class="logo">DROP<span>RAW</span></div>
+    <div class="badge">V1.0 / FILE SHARE</div>
+  </header>
+
+  <div class="hero">
+    <h1>SHARE<em>FILES.</em></h1>
+    <p>// upload any file — get a raw link instantly. no signup. no limits.</p>
+  </div>
+
+  <!-- UPLOAD ZONE -->
+  <div class="upload-zone" id="dropZone">
+    <input type="file" id="fileInput" multiple>
+    <div class="upload-icon">↑</div>
+    <h2>DROP FILES HERE</h2>
+    <p>or click to browse — any format accepted</p>
+  </div>
+  <div class="upload-hint">MAX 100MB PER FILE · LINK VALID 24H</div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label">
+      <span id="progressName">Uploading...</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <!-- FILES -->
+  <div class="files-section" id="filesSection" style="display:none">
+    <div class="section-label">Shared Files</div>
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-val" id="statFiles">0</div>
+      <div class="stat-label">Files Shared</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statSize">0 B</div>
+      <div class="stat-label">Total Size</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statLinks">0</div>
+      <div class="stat-label">Raw Links</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">LINK COPIED!</div>
+
+<script>
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const fileList = document.getElementById('fileList');
+  const filesSection = document.getElementById('filesSection');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressName = document.getElementById('progressName');
+  const progressPct = document.getElementById('progressPct');
+  const toast = document.getElementById('toast');
+
+  let uploadedFiles = [];
+  let totalSize = 0;
+  let linkCount = 0;
+
+  // Drag & Drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    handleFiles([...e.dataTransfer.files]);
+  });
+
+  fileInput.addEventListener('change', e => handleFiles([...e.target.files]));
+
+  function handleFiles(files) {
+    files.forEach((file, i) => {
+      setTimeout(() => simulateUpload(file), i * 300);
+    });
+    fileInput.value = '';
+  }
+
+  function simulateUpload(file) {
+    progressWrap.classList.add('active');
+    progressName.textContent = file.name;
+    progressFill.style.width = '0%';
+    progressPct.textContent = '0%';
+
+    let pct = 0;
+    const interval = setInterval(() => {
+      pct += Math.random() * 18 + 4;
+      if (pct >= 100) {
+        pct = 100;
+        clearInterval(interval);
+        setTimeout(() => {
+          progressWrap.classList.remove('active');
+          addFileCard(file);
+        }, 200);
+      }
+      progressFill.style.width = pct + '%';
+      progressPct.textContent = Math.floor(pct) + '%';
+    }, 80);
+  }
+
+  function generateRawLink(file) {
+    const hash = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    const ext = file.name.split('.').pop();
+    return `https://dropraw.io/r/${hash}/${encodeURIComponent(file.name)}`;
+  }
+
+  function getExt(name) {
+    const parts = name.split('.');
+    return parts.length > 1 ? parts.pop().toUpperCase().slice(0, 4) : 'FILE';
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function addFileCard(file) {
+    const rawLink = generateRawLink(file);
+    const id = 'f_' + Date.now() + Math.random().toString(36).slice(2);
+
+    uploadedFiles.push({ file, rawLink, id });
+    totalSize += file.size;
+    linkCount++;
+    updateStats();
+
+    filesSection.style.display = 'block';
+
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.id = id;
+    item.style.display = 'grid';
+    item.style.gridTemplateColumns = '1fr';
+    item.style.gap = '0';
+
+    item.innerHTML = `
+      <div class="file-item-inner">
+        <div class="file-icon">${getExt(file.name)}</div>
+        <div class="file-meta">
+          <div class="file-name">${file.name}</div>
+          <div class="file-size">${formatSize(file.size)} · ${new Date().toLocaleTimeString()}</div>
+        </div>
+        <div class="file-actions">
+          <button class="btn btn-link" onclick="showLink('${id}')">RAW LINK</button>
+          <button class="btn btn-del" onclick="removeFile('${id}')">✕</button>
+        </div>
+      </div>
+      <div class="link-row" id="link_${id}">
+        <input class="link-url" id="url_${id}" value="${rawLink}" readonly>
+        <button class="copy-btn" id="copy_${id}" onclick="copyLink('${id}', '${rawLink}')">COPY</button>
+      </div>
+    `;
+
+    fileList.prepend(item);
+
+    // Auto show link
+    setTimeout(() => showLink(id), 100);
+  }
+
+  function showLink(id) {
+    const linkRow = document.getElementById('link_' + id);
+    if (linkRow) {
+      linkRow.classList.toggle('visible');
+    }
+  }
+
+  function copyLink(id, url) {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('copy_' + id);
+      btn.textContent = 'COPIED!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'COPY';
+        btn.classList.remove('copied');
+      }, 2000);
+      showToast();
+    }).catch(() => {
+      const input = document.getElementById('url_' + id);
+      input.select();
+      document.execCommand('copy');
+      showToast();
+    });
+  }
+
+  function removeFile(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(20px)';
+      el.style.transition = 'all 0.2s ease';
+      setTimeout(() => {
+        el.remove();
+        uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+        if (fileList.children.length === 0) filesSection.style.display = 'none';
+        updateStats();
+      }, 200);
+    }
+  }
+
+  function updateStats() {
+    document.getElementById('statFiles').textContent = uploadedFiles.length;
+    document.getElementById('statSize').textContent = formatSize(totalSize);
+    document.getElementById('statLinks').textContent = linkCount;
+  }
+
+  function showToast() {
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+</script>
+</body>
+</html>
